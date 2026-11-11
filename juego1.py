@@ -1,4 +1,4 @@
-# juego1.py
+
 import sys
 import random
 from pathlib import Path
@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QMessageBox,
     QScrollArea,
+    QFrame,
 )
 
 from PySide6.QtGui import QPixmap, QFont, QIcon, QGuiApplication
@@ -25,21 +26,45 @@ from PySide6.QtCore import Qt, QTimer
 # ==========================================================
 
 BASE_DIR = Path(__file__).resolve().parent
-
 IMAGE_DIR = BASE_DIR / "imagenes_aprendizaje"
 
 EXTENSIONS = (".jpg", ".jpeg", ".png")
 
-COLUMNAS_MAX = 6
+COLUMNAS_MAX = 7
 
 ANCHO_CARTA_BASE = 110
 ALTO_CARTA_BASE = 130
 
-# Proporción de imágenes que se usarán en cada partida (0.5 = la mitad)
 PROPORCION_IMAGENES = 0.5
+MIN_PAREJAS = 2
+MAX_PAREJAS = 14
 
-# Mínimo de parejas por partida (aunque haya pocas imágenes)
-MIN_PAREDAS = 2
+
+# ==========================================================
+# PALETA GESTOSVISION
+# ==========================================================
+
+MORADO = "#6C4DC4"
+MORADO_OSCURO = "#5B3A9E"
+
+NARANJA = "#F7941D"
+NARANJA_CLARO = "#FFB347"
+NARANJA_OSCURO = "#D97706"
+
+ROSA = "#F0527A"
+ROSA_OSCURO = "#C93660"
+
+CREMA = "#FFF3DD"
+NAVY = "#2B3A67"
+BLANCO = "#FFFFFF"
+
+VERDE = "#4CAF50"
+VERDE_CLARO = "#DDF5E3"
+VERDE_OSCURO = "#318344"
+
+LAVANDA = "#E8DFFF"
+SECUNDARIO = "#7A6A99"
+BORDE = "#FFD08A"
 
 
 # ==========================================================
@@ -54,39 +79,35 @@ class JuegoMemoria(QMainWindow):
 
         self.setWindowTitle("GESTOSVISION - Juego de memoria")
 
-        # Ajustar tamaño a la pantalla disponible (más compacto)
         pantalla = QGuiApplication.primaryScreen().availableGeometry()
+
         ancho = min(780, pantalla.width() - 60)
         alto = min(620, pantalla.height() - 60)
+
         self.resize(ancho, alto)
 
-        # Estado del juego
         self.cartas = []
         self.seleccionadas = []
         self.parejas_encontradas = []
 
         self.intentos = 0
         self.parejas = 0
-
         self.bloqueado = False
 
         self.temporizador = QTimer()
         self.temporizador.setSingleShot(True)
         self.temporizador.timeout.connect(self.ocultar_cartas)
 
-        # Imágenes disponibles en disco
         self.imagenes = []
-
-        # Imágenes elegidas para la partida actual
         self.imagenes_juego = []
 
-        # Tamaño dinámico de cartas
         self.ancho_carta = ANCHO_CARTA_BASE
         self.alto_carta = ALTO_CARTA_BASE
-        self.columnas_actuales = 4
+        self.columnas_actuales = COLUMNAS_MAX
+
+        self.botones = []
 
         self.crear_interfaz()
-
         self.cargar_imagenes()
 
     # ======================================================
@@ -96,34 +117,80 @@ class JuegoMemoria(QMainWindow):
     def crear_interfaz(self):
 
         central = QWidget()
+        central.setObjectName("centralJuego")
         self.setCentralWidget(central)
 
         layout_principal = QVBoxLayout(central)
-        layout_principal.setSpacing(8)
-        layout_principal.setContentsMargins(10, 10, 10, 10)
+        layout_principal.setSpacing(10)
+        layout_principal.setContentsMargins(14, 12, 14, 12)
 
         # Título
-        titulo = QLabel("JUEGO DE MEMORIA")
+
+        titulo = QLabel("¡JUEGO DE MEMORIA!")
         titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        titulo.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+        titulo.setFont(QFont("Comic Sans MS", 19, QFont.Weight.Bold))
+
+        titulo.setStyleSheet(f"""
+            QLabel {{
+                color: {NAVY};
+                background: transparent;
+                border: none;
+                padding: 4px;
+            }}
+        """)
+
         layout_principal.addWidget(titulo)
 
         # Instrucciones
+
         instrucciones = QLabel(
             "Encuentra la pareja: relaciona cada palabra con su seña."
         )
+
         instrucciones.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        instrucciones.setFont(QFont("Arial", 10))
+        instrucciones.setWordWrap(True)
+
+        instrucciones.setStyleSheet(f"""
+            QLabel {{
+                color: {SECUNDARIO};
+                font-family: "Comic Sans MS", "Verdana";
+                font-size: 12px;
+                font-weight: bold;
+                background: transparent;
+                border: none;
+                padding: 2px;
+            }}
+        """)
+
         layout_principal.addWidget(instrucciones)
 
-        # Información del juego
+        # Marcadores
+
         informacion = QHBoxLayout()
+        informacion.setSpacing(12)
 
         self.label_intentos = QLabel("Intentos: 0")
         self.label_parejas = QLabel("Parejas: 0")
 
-        self.label_intentos.setFont(QFont("Arial", 10))
-        self.label_parejas.setFont(QFont("Arial", 10))
+        for etiqueta in (
+            self.label_intentos,
+            self.label_parejas
+        ):
+
+            etiqueta.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            etiqueta.setStyleSheet(f"""
+                QLabel {{
+                    background-color: {LAVANDA};
+                    color: {MORADO_OSCURO};
+                    border: 2px solid {MORADO};
+                    border-radius: 12px;
+                    padding: 8px 14px;
+                    font-family: "Comic Sans MS", "Verdana";
+                    font-size: 12px;
+                    font-weight: bold;
+                }}
+            """)
 
         informacion.addWidget(self.label_intentos)
         informacion.addStretch()
@@ -131,63 +198,104 @@ class JuegoMemoria(QMainWindow):
 
         layout_principal.addLayout(informacion)
 
-        # Tablero dentro de un QScrollArea para que nunca se desborde
+        # Tablero
+
         self.contenedor_tablero = QWidget()
+        self.contenedor_tablero.setStyleSheet(
+            "background-color: transparent;"
+        )
+
         self.tablero = QGridLayout(self.contenedor_tablero)
-        self.tablero.setSpacing(8)
-        self.tablero.setContentsMargins(5, 5, 5, 5)
+        self.tablero.setSpacing(10)
+        self.tablero.setContentsMargins(8, 8, 8, 8)
 
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.contenedor_tablero)
         self.scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        self.scroll.setStyleSheet("QScrollArea { background: transparent; }")
+
+        self.scroll.setStyleSheet(f"""
+            QScrollArea {{
+                background-color: transparent;
+                border: none;
+            }}
+
+            QScrollArea > QWidget > QWidget {{
+                background-color: transparent;
+            }}
+        """)
 
         layout_principal.addWidget(self.scroll, stretch=1)
 
         # Mensaje
+
         self.mensaje = QLabel("¡Encuentra todas las parejas!")
+
         self.mensaje.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.mensaje.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        self.mensaje.setWordWrap(True)
+
+        self.mensaje.setStyleSheet(f"""
+            QLabel {{
+                color: {NAVY};
+                background-color: {CREMA};
+                border: 2px solid {BORDE};
+                border-radius: 14px;
+                padding: 9px;
+                font-family: "Comic Sans MS", "Verdana";
+                font-size: 12px;
+                font-weight: bold;
+            }}
+        """)
+
         layout_principal.addWidget(self.mensaje)
 
-        # Botones inferiores
-        botones = QHBoxLayout()
+        # Únicamente el botón de nuevo juego.
 
-        self.boton_reiniciar = QPushButton("Nuevo juego")
+        self.boton_reiniciar = QPushButton("↻  Nuevo juego")
+        self.boton_reiniciar.setMinimumHeight(44)
+        self.boton_reiniciar.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
         self.boton_reiniciar.clicked.connect(self.nuevo_juego)
 
-        self.boton_salir = QPushButton("Salir")
-        self.boton_salir.clicked.connect(self.close)
-
-        botones.addWidget(self.boton_reiniciar)
-        botones.addWidget(self.boton_salir)
-
-        layout_principal.addLayout(botones)
-
-        self.setStyleSheet("""
-
-            QMainWindow {
-                background-color: #F2F4F8;
-            }
-
-            QLabel {
-                color: #202938;
-            }
-
-            QPushButton {
-                background-color: #FFFFFF;
-                border: 2px solid #D5DCE5;
-                border-radius: 12px;
-                padding: 8px;
+        self.boton_reiniciar.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {MORADO};
+                color: {BLANCO};
+                border: 2px solid {MORADO};
+                border-bottom: 5px solid {MORADO_OSCURO};
+                border-radius: 15px;
+                padding: 8px 20px;
+                font-family: "Comic Sans MS", "Verdana";
                 font-size: 13px;
                 font-weight: bold;
-            }
+            }}
 
-            QPushButton:hover {
-                background-color: #E2EAF5;
-            }
+            QPushButton:hover {{
+                background-color: #8065D5;
+            }}
 
+            QPushButton:pressed {{
+                background-color: {MORADO_OSCURO};
+                border-bottom: 2px solid {MORADO_OSCURO};
+            }}
+        """)
+
+        layout_principal.addWidget(self.boton_reiniciar)
+
+        # Fondo general
+
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {CREMA};
+            }}
+
+            QWidget#centralJuego {{
+                background-color: transparent;
+                color: {NAVY};
+                font-family: "Comic Sans MS", "Verdana";
+            }}
         """)
 
     # ======================================================
@@ -219,7 +327,7 @@ class JuegoMemoria(QMainWindow):
             self.close()
             return
 
-        if len(self.imagenes) < 2:
+        if len(self.imagenes) < MIN_PAREJAS:
 
             QMessageBox.warning(
                 self,
@@ -233,33 +341,19 @@ class JuegoMemoria(QMainWindow):
         self.nuevo_juego()
 
     # ======================================================
-    # AJUSTAR TAMAÑO DE CARTAS SEGÚN CANTIDAD
+    # AJUSTAR TAMAÑO Y DISTRIBUCIÓN DE CARTAS
     # ======================================================
 
     def ajustar_tamano_cartas(self):
 
-        total = len(self.imagenes_juego) * 2
+        # Siempre utilizar 7 columnas.
 
-        # Columnas: entre 4 y COLUMNAS_MAX
-        if total <= 8:
-            self.columnas_actuales = 4
-        elif total <= 12:
-            self.columnas_actuales = 4
-        elif total <= 20:
-            self.columnas_actuales = 5
-        else:
-            self.columnas_actuales = COLUMNAS_MAX
+        self.columnas_actuales = COLUMNAS_MAX
 
-        # Cartas más compactas
-        if total <= 12:
-            self.ancho_carta = ANCHO_CARTA_BASE
-            self.alto_carta = ALTO_CARTA_BASE
-        elif total <= 20:
-            self.ancho_carta = 95
-            self.alto_carta = 115
-        else:
-            self.ancho_carta = 85
-            self.alto_carta = 105
+        # Mantener el tamaño original de las tarjetas.
+
+        self.ancho_carta = ANCHO_CARTA_BASE
+        self.alto_carta = ALTO_CARTA_BASE
 
     # ======================================================
     # CREAR JUEGO
@@ -277,19 +371,26 @@ class JuegoMemoria(QMainWindow):
 
         self.bloqueado = False
 
-        # --------------------------------------------------
-        # Elegir solo una parte de las imágenes al azar
-        # --------------------------------------------------
         total_disponibles = len(self.imagenes)
-        cantidad = max(MIN_PAREDAS, int(total_disponibles * PROPORCION_IMAGENES))
-        cantidad = min(cantidad, total_disponibles)  # no pedir más de las que hay
 
-        self.imagenes_juego = random.sample(self.imagenes, cantidad)
+        if total_disponibles < MIN_PAREJAS:
+            return
+
+        # Seleccionar hasta 14 imágenes para crear
+        # un máximo de 28 tarjetas.
+
+        cantidad = min(
+            MAX_PAREJAS,
+            total_disponibles
+        )
+
+        self.imagenes_juego = random.sample(
+            self.imagenes,
+            cantidad
+        )
 
         self.ajustar_tamano_cartas()
 
-        # Crear dos cartas por imagen:
-        # Una carta de texto y otra de imagen.
         self.cartas = []
 
         for imagen in self.imagenes_juego:
@@ -308,7 +409,6 @@ class JuegoMemoria(QMainWindow):
                 "imagen": imagen,
             })
 
-        # Mezclar las cartas
         random.shuffle(self.cartas)
 
         self.actualizar_informacion()
@@ -323,11 +423,9 @@ class JuegoMemoria(QMainWindow):
 
     def crear_tablero(self):
 
-        # Eliminar cartas anteriores
         while self.tablero.count():
 
             elemento = self.tablero.takeAt(0)
-
             widget = elemento.widget()
 
             if widget:
@@ -339,41 +437,76 @@ class JuegoMemoria(QMainWindow):
 
             boton = QPushButton("?")
 
-            boton.setFixedSize(self.ancho_carta, self.alto_carta)
-
-            boton.setFont(
-                QFont("Arial", 18, QFont.Weight.Bold)
+            boton.setFixedSize(
+                self.ancho_carta,
+                self.alto_carta
             )
 
-            boton.setStyleSheet("""
+            boton.setFont(
+                QFont("Comic Sans MS", 22, QFont.Weight.Bold)
+            )
 
-                QPushButton {
-                    background-color: #34495E;
-                    color: white;
-                    border: 3px solid #263747;
-                    border-radius: 15px;
-                }
+            self.aplicar_estilo_carta_oculta(boton)
 
-                QPushButton:hover {
-                    background-color: #46627D;
-                }
-
-            """)
+            boton.setCursor(
+                Qt.CursorShape.PointingHandCursor
+            )
 
             boton.clicked.connect(
-                lambda checked=False, i=indice: self.voltear_carta(i)
+                lambda checked=False, i=indice:
+                self.voltear_carta(i)
             )
 
             fila = indice // self.columnas_actuales
             columna = indice % self.columnas_actuales
 
-            self.tablero.addWidget(boton, fila, columna)
+            self.tablero.addWidget(
+                boton,
+                fila,
+                columna
+            )
 
             self.botones.append(boton)
 
         self.tablero.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
+            Qt.AlignmentFlag.AlignTop |
+            Qt.AlignmentFlag.AlignHCenter
         )
+
+    # ======================================================
+    # ESTILO DE CARTA OCULTA
+    # ======================================================
+
+    def aplicar_estilo_carta_oculta(self, boton):
+
+        boton.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {NARANJA};
+                color: {BLANCO};
+                border: 3px solid {NARANJA_OSCURO};
+                border-bottom: 7px solid #B85F08;
+                border-radius: 17px;
+                font-family: "Comic Sans MS", "Verdana";
+                font-size: 24px;
+                font-weight: bold;
+            }}
+
+            QPushButton:hover:enabled {{
+                background-color: {NARANJA_CLARO};
+                border-color: {NARANJA_OSCURO};
+                border-bottom: 7px solid #B85F08;
+            }}
+
+            QPushButton:pressed:enabled {{
+                background-color: {NARANJA_OSCURO};
+                border-bottom: 3px solid #B85F08;
+            }}
+
+            QPushButton:disabled {{
+                background-color: {NARANJA};
+                color: {BLANCO};
+            }}
+        """)
 
     # ======================================================
     # MOSTRAR CARTA
@@ -389,17 +522,18 @@ class JuegoMemoria(QMainWindow):
             boton.setText(carta["nombre"])
             boton.setIcon(QIcon())
 
-            boton.setStyleSheet("""
-
-                QPushButton {
-                    background-color: #FFFFFF;
-                    color: #2457A7;
-                    border: 3px solid #2457A7;
-                    border-radius: 15px;
-                    font-size: 14px;
+            boton.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {BLANCO};
+                    color: {MORADO_OSCURO};
+                    border: 3px solid {MORADO};
+                    border-bottom: 6px solid {MORADO_OSCURO};
+                    border-radius: 17px;
+                    font-family: "Comic Sans MS", "Verdana";
+                    font-size: 13px;
                     font-weight: bold;
-                }
-
+                    padding: 4px;
+                }}
             """)
 
         else:
@@ -417,14 +551,14 @@ class JuegoMemoria(QMainWindow):
             boton.setIcon(QIcon(pixmap))
             boton.setIconSize(pixmap.size())
 
-            boton.setStyleSheet("""
-
-                QPushButton {
-                    background-color: #FFFFFF;
-                    border: 3px solid #2457A7;
-                    border-radius: 15px;
-                }
-
+            boton.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {BLANCO};
+                    border: 3px solid {MORADO};
+                    border-bottom: 6px solid {MORADO_OSCURO};
+                    border-radius: 17px;
+                    padding: 4px;
+                }}
             """)
 
     # ======================================================
@@ -438,18 +572,7 @@ class JuegoMemoria(QMainWindow):
         boton.setText("?")
         boton.setIcon(QIcon())
 
-        boton.setStyleSheet("""
-
-            QPushButton {
-                background-color: #34495E;
-                color: white;
-                border: 3px solid #263747;
-                border-radius: 15px;
-                font-size: 18px;
-                font-weight: bold;
-            }
-
-        """)
+        self.aplicar_estilo_carta_oculta(boton)
 
     # ======================================================
     # VOLTEAR CARTA
@@ -467,11 +590,13 @@ class JuegoMemoria(QMainWindow):
             return
 
         self.mostrar_carta(indice)
+
         self.seleccionadas.append(indice)
 
         if len(self.seleccionadas) == 2:
 
             self.intentos += 1
+
             self.actualizar_informacion()
             self.comprobar_pareja()
 
@@ -493,25 +618,32 @@ class JuegoMemoria(QMainWindow):
                 f"¡Correcto! Encontraste: {carta1['nombre']}"
             )
 
-            self.parejas_encontradas.extend(self.seleccionadas)
+            self.parejas_encontradas.extend(
+                self.seleccionadas
+            )
+
             self.parejas += 1
 
             for indice in self.seleccionadas:
 
-                self.botones[indice].setStyleSheet("""
+                boton = self.botones[indice]
 
-                    QPushButton {
-                        background-color: #C9F2D4;
-                        color: #176B35;
-                        border: 3px solid #37A45B;
-                        border-radius: 15px;
-                    }
-
+                boton.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {VERDE_CLARO};
+                        color: {VERDE_OSCURO};
+                        border: 3px solid {VERDE};
+                        border-bottom: 6px solid {VERDE_OSCURO};
+                        border-radius: 17px;
+                        font-family: "Comic Sans MS", "Verdana";
+                        font-weight: bold;
+                    }}
                 """)
 
-                self.botones[indice].setEnabled(False)
+                boton.setEnabled(False)
 
             self.seleccionadas = []
+
             self.actualizar_informacion()
 
             if self.parejas == len(self.imagenes_juego):
@@ -519,7 +651,9 @@ class JuegoMemoria(QMainWindow):
 
         else:
 
-            self.mensaje.setText("No coinciden. ¡Inténtalo otra vez!")
+            self.mensaje.setText(
+                "No coinciden. ¡Inténtalo otra vez!"
+            )
 
             self.bloqueado = True
             self.temporizador.start(1000)
@@ -536,7 +670,9 @@ class JuegoMemoria(QMainWindow):
         self.seleccionadas = []
         self.bloqueado = False
 
-        self.mensaje.setText("¡Continúa buscando las parejas!")
+        self.mensaje.setText(
+            "¡Continúa buscando las parejas!"
+        )
 
     # ======================================================
     # ACTUALIZAR INFORMACIÓN
@@ -544,7 +680,10 @@ class JuegoMemoria(QMainWindow):
 
     def actualizar_informacion(self):
 
-        self.label_intentos.setText(f"Intentos: {self.intentos}")
+        self.label_intentos.setText(
+            f"Intentos: {self.intentos}"
+        )
+
         self.label_parejas.setText(
             f"Parejas: {self.parejas}/{len(self.imagenes_juego)}"
         )
@@ -561,7 +700,7 @@ class JuegoMemoria(QMainWindow):
 
         QMessageBox.information(
             self,
-            "Juego terminado",
+            "¡Juego terminado!",
             f"¡Excelente trabajo!\n\n"
             f"Parejas encontradas: {self.parejas}\n"
             f"Intentos realizados: {self.intentos}"

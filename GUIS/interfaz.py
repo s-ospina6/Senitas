@@ -92,7 +92,7 @@ PAGINAS_JUGAR = [
 
 # --- Página de adultos (lista de herramientas) ---
 PAGINA_ADULTOS = {
-    "nombre": "Para adultos",
+    "nombre": "Configuraciones",
     "emoji": "⚙️",
     "subtitulo": "Herramientas para enseñarle señas nuevas al robot.",
     "color": "#8E6FD8",       # morado
@@ -361,7 +361,7 @@ class GestosVision(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("🤖 GESTOSVISION - ¡Aprende jugando! 🤖")
+        self.setWindowTitle("🤖 SEÑITAS - ¡Aprende jugando! 🤖")
         self.setMinimumSize(1050, 740)
 
         self.procesos = []
@@ -454,7 +454,7 @@ class GestosVision(QMainWindow):
 
         textos = QVBoxLayout()
         textos.setSpacing(0)
-        t1 = QLabel("GESTOSVISION")
+        t1 = QLabel("SEÑITAS")
         t1.setObjectName("marca")
         t2 = QLabel("¡Aprende señas! ✨")
         t2.setObjectName("marca_sub")

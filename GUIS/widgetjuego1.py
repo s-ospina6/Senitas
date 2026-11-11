@@ -1,14 +1,20 @@
-# widgetjuego1.py
+
 import sys
 from pathlib import Path
 
-# ----------------------------------------------------------
-# Añadir la carpeta raíz del proyecto (GESTOSVISION) al sys.path
-# para poder importar juego1.py aunque el widget esté en GUIS/
-# ----------------------------------------------------------
-RUTA_PROYECTO = Path(__file__).resolve().parent.parent  # .../GESTOSVISION
+# ==========================================================
+# RUTA DEL PROYECTO
+# ==========================================================
+
+RUTA_PROYECTO = Path(__file__).resolve().parent.parent
+
 if str(RUTA_PROYECTO) not in sys.path:
     sys.path.insert(0, str(RUTA_PROYECTO))
+
+
+# ==========================================================
+# IMPORTACIONES
+# ==========================================================
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -17,13 +23,36 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QMessageBox,
+    QHBoxLayout,
+    QFrame,
 )
 
-from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import Qt
 
-# Ahora sí se puede importar juego1 desde la carpeta padre
 from juego1 import JuegoMemoria, IMAGE_DIR, EXTENSIONS
+
+
+# ==========================================================
+# PALETA GESTOSVISION
+# ==========================================================
+
+MORADO = "#6C4DC4"
+MORADO_OSCURO = "#5B3A9E"
+
+NARANJA = "#F7941D"
+NARANJA_OSCURO = "#D97706"
+
+ROSA = "#F0527A"
+ROSA_OSCURO = "#C93660"
+
+CREMA = "#FFF3DD"
+NAVY = "#2B3A67"
+BLANCO = "#FFFFFF"
+
+LAVANDA = "#E8DFFF"
+SECUNDARIO = "#7A6A99"
+BORDE = "#FFE0B2"
 
 
 # ==========================================================
@@ -31,12 +60,12 @@ from juego1 import JuegoMemoria, IMAGE_DIR, EXTENSIONS
 # ==========================================================
 
 class WidgetJuegoMemoria(QWidget):
+
     """
     Contenedor del juego de memoria.
 
-    - Si se instancia solo, funciona como ventana independiente.
-    - Si se incrusta en otro widget (QStackedWidget, QTabWidget, etc.),
-      reutiliza el widget central de JuegoMemoria y se adapta al espacio.
+    Se puede integrar dentro de la interfaz principal
+    y conserva la lógica de JuegoMemoria.
     """
 
     def __init__(self, parent=None, verificar_imagenes=True):
@@ -45,154 +74,357 @@ class WidgetJuegoMemoria(QWidget):
 
         self.setWindowTitle("GESTOSVISION - Juego de memoria")
 
-        # Tamaño acotado a la pantalla disponible
         pantalla = QGuiApplication.primaryScreen().availableGeometry()
+
         ancho = min(950, pantalla.width() - 60)
         alto = min(780, pantalla.height() - 60)
+
         self.resize(ancho, alto)
 
-        # Layout raíz (sin márgenes para que el juego ocupe todo)
         self._layout = QVBoxLayout(self)
-        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setContentsMargins(12, 12, 12, 12)
         self._layout.setSpacing(0)
 
         self.juego = None
+        self._contenedor_aviso = None
 
-        # Verificar imágenes antes de crear el juego
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: transparent;
+                color: {NAVY};
+                font-family: "Comic Sans MS", "Verdana";
+            }}
+        """)
+
         if verificar_imagenes and not self._hay_imagenes():
+
             self._mostrar_aviso_sin_imagenes()
             return
 
-        # Crear el juego interno
         self._crear_juego()
 
     # ======================================================
-    # CONSTRUCCIÓN
+    # CONSTRUCCIÓN DEL JUEGO
     # ======================================================
 
     def _crear_juego(self):
-        """Crea JuegoMemoria y extrae su widget central."""
+
+        if self.juego is not None:
+            self.liberar()
 
         self.juego = JuegoMemoria()
 
-        # Quitar la barra de estado/menú por si acaso (no hay, pero por seguridad)
-        self.juego.setMenuBar(None) if hasattr(self.juego, "setMenuBar") else None
+        # Quitar barra de menú si existe
 
-        # Extraer el widget central del QMainWindow y reubicarlo aquí
+        if hasattr(self.juego, "setMenuBar"):
+            self.juego.setMenuBar(None)
+
+        # Obtener el contenido central del juego
+
         central = self.juego.centralWidget()
-        central.setParent(self)
-        self._layout.addWidget(central)
 
-        # Si el juego interno se cierra, cerramos también el contenedor
-        self.juego.closeEvent = self._al_cerrar_juego
-
-        # Interceptar "Nuevo juego"/"Salir" para que se comporten bien dentro del widget
-        self._conectar_botones()
-
-    def _conectar_botones(self):
-        """Redirige los botones del juego a acciones del contenedor."""
-        if self.juego is None:
+        if central is None:
             return
 
-        # "Salir" debe cerrar el widget contenedor, no solo el QMainWindow interno
-        try:
-            self.juego.boton_salir.clicked.disconnect()
-        except (RuntimeError, TypeError):
-            pass
-        self.juego.boton_salir.clicked.connect(self._salir)
+        central.setParent(self)
 
-        # "Nuevo juego" ya apunta a nuevo_juego(); no requiere cambios.
+        central.setStyleSheet("""
+            QWidget {
+                background-color: transparent;
+            }
+        """)
 
-    def _mostrar_aviso_sin_imagenes(self):
-        """Muestra un mensaje claro si no hay imágenes."""
+        self._layout.addWidget(central)
 
-        contenedor = QWidget()
-        layout = QVBoxLayout(contenedor)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(10)
+        # No se conecta ningún botón Salir.
+        # El usuario cambia de actividad desde el menú principal.
 
-        titulo = QLabel("No se encontraron imágenes")
-        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        titulo.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-
-        detalle = QLabel(
-            "Agrega al menos 2 imágenes (.jpg, .jpeg, .png)\n"
-            f"en la carpeta:\n{IMAGE_DIR}"
-        )
-        detalle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        detalle.setFont(QFont("Arial", 11))
-        detalle.setWordWrap(True)
-
-        boton_abrir = QPushButton("Abrir carpeta")
-        boton_abrir.clicked.connect(self._abrir_carpeta_imagenes)
-
-        boton_reintentar = QPushButton("Reintentar")
-        boton_reintentar.clicked.connect(self._reintentar)
-
-        layout.addWidget(titulo)
-        layout.addWidget(detalle)
-        layout.addWidget(boton_abrir)
-        layout.addWidget(boton_reintentar)
-
-        self._contenedor_aviso = contenedor
-        self._layout.addWidget(contenedor)
+        self._conectar_botones()
 
     # ======================================================
-    # ACCIONES
+    # CONECTAR BOTONES
+    # ======================================================
+
+    def _conectar_botones(self):
+
+        # El juego ya no tiene botón Salir.
+        # El botón Nuevo juego funciona directamente
+        # desde la clase JuegoMemoria.
+
+        pass
+
+    # ======================================================
+    # AVISO SIN IMÁGENES
+    # ======================================================
+
+    def _mostrar_aviso_sin_imagenes(self):
+
+        contenedor = QFrame()
+        contenedor.setObjectName("avisoImagenes")
+
+        layout = QVBoxLayout(contenedor)
+
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(15)
+
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Icono
+
+        icono = QLabel("🧩")
+        icono.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        icono.setStyleSheet("""
+            QLabel {
+                font-size: 55px;
+                background: transparent;
+                border: none;
+            }
+        """)
+
+        # Título
+
+        titulo = QLabel("¡Ups! No encontramos imágenes")
+        titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        titulo.setWordWrap(True)
+
+        titulo.setStyleSheet(f"""
+            QLabel {{
+                color: {NAVY};
+                font-family: "Comic Sans MS", "Verdana";
+                font-size: 22px;
+                font-weight: 900;
+                background: transparent;
+                border: none;
+            }}
+        """)
+
+        # Descripción
+
+        detalle = QLabel(
+            "Para jugar necesitas al menos 2 imágenes.\n\n"
+            "Agrega archivos JPG, JPEG o PNG en la carpeta:"
+        )
+
+        detalle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        detalle.setWordWrap(True)
+
+        detalle.setStyleSheet(f"""
+            QLabel {{
+                color: {SECUNDARIO};
+                font-family: "Comic Sans MS", "Verdana";
+                font-size: 13px;
+                background: transparent;
+                border: none;
+            }}
+        """)
+
+        # Ruta
+
+        ruta = QLabel(str(IMAGE_DIR))
+
+        ruta.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ruta.setWordWrap(True)
+
+        ruta.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+
+        ruta.setStyleSheet(f"""
+            QLabel {{
+                color: {MORADO};
+                background-color: {LAVANDA};
+                border-radius: 12px;
+                padding: 12px;
+                font-size: 11px;
+                font-weight: bold;
+                border: none;
+            }}
+        """)
+
+        # Botones
+
+        fila_botones = QHBoxLayout()
+        fila_botones.setSpacing(12)
+
+        boton_abrir = QPushButton("📁  Abrir carpeta")
+
+        boton_abrir.setMinimumHeight(46)
+        boton_abrir.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        boton_abrir.clicked.connect(
+            self._abrir_carpeta_imagenes
+        )
+
+        boton_reintentar = QPushButton("↻  Reintentar")
+
+        boton_reintentar.setObjectName("principal")
+        boton_reintentar.setMinimumHeight(46)
+
+        boton_reintentar.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        boton_reintentar.clicked.connect(
+            self._reintentar
+        )
+
+        fila_botones.addWidget(boton_abrir)
+        fila_botones.addWidget(boton_reintentar)
+
+        # Añadir elementos
+
+        layout.addWidget(icono)
+        layout.addWidget(titulo)
+        layout.addWidget(detalle)
+        layout.addWidget(ruta)
+        layout.addSpacing(8)
+        layout.addLayout(fila_botones)
+
+        self._contenedor_aviso = contenedor
+
+        self._layout.addWidget(contenedor)
+
+        # Estilos del aviso
+
+        contenedor.setStyleSheet(f"""
+            QFrame#avisoImagenes {{
+                background-color: {BLANCO};
+                border: 3px solid {BORDE};
+                border-bottom: 6px solid {NARANJA};
+                border-radius: 28px;
+            }}
+
+            QPushButton {{
+                background-color: {LAVANDA};
+                color: {NAVY};
+                border: 2px solid {MORADO};
+                border-bottom: 5px solid {MORADO_OSCURO};
+                border-radius: 15px;
+                padding: 9px 16px;
+                font-family: "Comic Sans MS", "Verdana";
+                font-size: 12px;
+                font-weight: 900;
+            }}
+
+            QPushButton:hover:enabled {{
+                background-color: #D8C9FF;
+            }}
+
+            QPushButton:pressed:enabled {{
+                background-color: #C7B5F5;
+                border-bottom: 2px solid {MORADO_OSCURO};
+            }}
+
+            QPushButton#principal {{
+                background-color: {ROSA};
+                color: {BLANCO};
+                border: 2px solid {ROSA};
+                border-bottom: 5px solid {ROSA_OSCURO};
+            }}
+
+            QPushButton#principal:hover:enabled {{
+                background-color: #FF7094;
+            }}
+
+            QPushButton#principal:pressed:enabled {{
+                background-color: {ROSA_OSCURO};
+                border-bottom: 2px solid {ROSA_OSCURO};
+            }}
+        """)
+
+    # ======================================================
+    # ABRIR CARPETA DE IMÁGENES
     # ======================================================
 
     def _abrir_carpeta_imagenes(self):
-        """Abre la carpeta de imágenes en el explorador del sistema."""
+
         from PySide6.QtGui import QDesktopServices
         from PySide6.QtCore import QUrl
 
-        IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(IMAGE_DIR)))
+        IMAGE_DIR.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        QDesktopServices.openUrl(
+            QUrl.fromLocalFile(str(IMAGE_DIR))
+        )
+
+    # ======================================================
+    # REINTENTAR
+    # ======================================================
 
     def _reintentar(self):
-        """Reintenta cargar imágenes y reconstruye el juego."""
+
         if self._hay_imagenes():
-            # Eliminar aviso
-            if hasattr(self, "_contenedor_aviso"):
+
+            if self._contenedor_aviso is not None:
+
                 self._contenedor_aviso.setParent(None)
                 self._contenedor_aviso.deleteLater()
-                del self._contenedor_aviso
+
+                self._contenedor_aviso = None
+
             self._crear_juego()
+
         else:
+
             QMessageBox.warning(
                 self,
                 "Sin imágenes",
-                f"Sigue sin haber imágenes en:\n{IMAGE_DIR}"
+                f"Sigue sin haber imágenes en:\n{IMAGE_DIR}",
             )
 
+    # ======================================================
+    # SALIR INTERNO
+    # ======================================================
+
     def _salir(self):
-        """Cierra el widget contenedor (y el juego interno si existe)."""
-        if self.juego is not None:
-            self.juego.temporizador.stop()
-            self.juego.close()
+
+        # Se conserva este método por compatibilidad,
+        # pero no existe un botón Salir en el juego.
+
+        self.liberar()
         self.close()
 
+    # ======================================================
+    # CIERRE DEL JUEGO INTERNO
+    # ======================================================
+
     def _al_cerrar_juego(self, evento):
-        """Cuando el QMainWindow interno se cierra, cerramos el contenedor."""
-        self.juego.temporizador.stop()
-        # Evita reentrada: desconecta el hook
-        self.juego.closeEvent = lambda e: None
-        self.close()
+
+        self.liberar()
+
+        if evento is not None:
+            evento.accept()
 
     # ======================================================
     # UTILIDADES
     # ======================================================
 
     def _hay_imagenes(self):
-        """Comprueba si hay al menos 2 imágenes válidas."""
-        IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+        IMAGE_DIR.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
         try:
+
             archivos = [
-                a for a in IMAGE_DIR.iterdir()
-                if a.is_file() and a.suffix.lower() in EXTENSIONS
+                archivo
+                for archivo in IMAGE_DIR.iterdir()
+                if archivo.is_file()
+                and archivo.suffix.lower() in EXTENSIONS
             ]
+
         except OSError:
+
             return False
+
         return len(archivos) >= 2
 
     # ======================================================
@@ -200,25 +432,37 @@ class WidgetJuegoMemoria(QWidget):
     # ======================================================
 
     def reiniciar(self):
-        """Reinicia el juego desde el contenedor."""
+
         if self.juego is not None:
             self.juego.nuevo_juego()
 
     def pausar(self):
-        """Detiene el temporizador (útil al cambiar de vista)."""
+
         if self.juego is not None:
             self.juego.temporizador.stop()
 
     def liberar(self):
-        """Libera recursos del juego (llámalo antes de destruir el widget)."""
+
         if self.juego is not None:
+
             self.juego.temporizador.stop()
+
             self.juego.close()
             self.juego = None
 
+    # ======================================================
+    # LIMPIEZA
+    # ======================================================
+
+    def closeEvent(self, event):
+
+        self.liberar()
+
+        super().closeEvent(event)
+
 
 # ==========================================================
-# PROGRAMA PRINCIPAL (para probar el widget solo)
+# PROGRAMA PRINCIPAL
 # ==========================================================
 
 def main():
@@ -232,4 +476,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()
