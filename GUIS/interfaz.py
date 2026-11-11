@@ -1,3 +1,4 @@
+
 import sys
 import subprocess
 from pathlib import Path
@@ -24,6 +25,7 @@ from modo_aprendizaje_widget import ModoAprendizajeWidget
 from modo_practica_widget import ModoPracticaWidget
 from reconocer_senas_widget import ReconocerSenasWidget
 from widgetjuego1 import WidgetJuegoMemoria
+from juego_camino_letras import JuegoCaminoLetras
 
 
 # ==========================================================
@@ -32,7 +34,6 @@ from widgetjuego1 import WidgetJuegoMemoria
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Paleta tomada de la imagen de referencia
 MORADO = "#6C4DC4"
 MORADO_OSCURO = "#5B3A9E"
 NARANJA = "#F7941D"
@@ -50,7 +51,10 @@ def claro(color, factor=110):
     return QColor(color).lighter(factor).name()
 
 
-# --- Secciones dentro de la app (cámara y juegos) ---
+# ==========================================================
+# SECCIONES DE LA APLICACIÓN
+# ==========================================================
+
 PAGINAS_JUGAR = [
     {
         "attr": "widget_aprendizaje",
@@ -58,7 +62,7 @@ PAGINAS_JUGAR = [
         "nombre": "Aprender",
         "emoji": "📚",
         "subtitulo": "¡Mira cómo se hace cada seña y practícala!",
-        "color": "#F0527A",   # rosa
+        "color": "#F0527A",
         "texto_activo": "#FFFFFF",
     },
     {
@@ -67,7 +71,7 @@ PAGINAS_JUGAR = [
         "nombre": "Practicar",
         "emoji": "🎯",
         "subtitulo": "Haz la seña frente a la cámara y gana estrellas.",
-        "color": "#2D9CDB",   # azul
+        "color": "#2D9CDB",
         "texto_activo": "#FFFFFF",
     },
     {
@@ -76,7 +80,7 @@ PAGINAS_JUGAR = [
         "nombre": "Reconocer señas",
         "emoji": "👀",
         "subtitulo": "¡El robot adivina qué seña estás haciendo!",
-        "color": "#FFC93C",   # amarillo
+        "color": "#FFC93C",
         "texto_activo": NAVY,
     },
     {
@@ -85,19 +89,33 @@ PAGINAS_JUGAR = [
         "nombre": "Juego de memoria",
         "emoji": "🎮",
         "subtitulo": "Encuentra las parejas y diviértete.",
-        "color": "#4CAF50",   # verde
+        "color": "#4CAF50",
+        "texto_activo": "#FFFFFF",
+    },
+    {
+        "attr": "widget_camino",
+        "fabrica": JuegoCaminoLetras,
+        "nombre": "Camino de letras",
+        "emoji": "🧩",
+        "subtitulo": "¡Sigue las señas correctas y llega a la meta!",
+        "color": "#F7941D",
         "texto_activo": "#FFFFFF",
     },
 ]
 
-# --- Página de adultos (lista de herramientas) ---
+
+# ==========================================================
+# PÁGINA DE ADULTOS
+# ==========================================================
+
 PAGINA_ADULTOS = {
     "nombre": "Configuraciones",
     "emoji": "⚙️",
     "subtitulo": "Herramientas para enseñarle señas nuevas al robot.",
-    "color": "#8E6FD8",       # morado
+    "color": "#8E6FD8",
     "texto_activo": "#FFFFFF",
 }
+
 
 HERRAMIENTAS_ADULTOS = [
     {
@@ -132,7 +150,7 @@ HERRAMIENTAS_ADULTOS = [
 
 
 # ==========================================================
-# ESTILOS
+# ESTILOS GENERALES
 # ==========================================================
 
 ESTILO = f"""
@@ -146,14 +164,16 @@ QLabel {{
     background: transparent;
 }}
 
-/* ---------- Contenedor redondeado tipo "teléfono" ---------- */
+/* Contenedor principal */
+
 QFrame#telefono {{
     background-color: {CREMA};
     border: 8px solid {CONTORNO};
     border-radius: 46px;
 }}
 
-/* ---------- Barra lateral naranja ---------- */
+/* Barra lateral */
+
 QFrame#barra {{
     background-color: {NARANJA};
     border: none;
@@ -189,12 +209,14 @@ QProgressBar {{
     min-height: 22px;
     max-height: 22px;
 }}
+
 QProgressBar::chunk {{
     background-color: #4CAF50;
     border-radius: 11px;
 }}
 
-/* ---------- Cabecera morada ---------- */
+/* Cabecera morada */
+
 QFrame#cabecera {{
     background-color: {MORADO};
     border: none;
@@ -224,22 +246,26 @@ QLabel#pastilla {{
     padding: 4px 18px;
 }}
 
-/* ---------- Cuerpo crema ---------- */
+/* Cuerpo crema */
+
 QFrame#cuerpo {{
     background-color: {CREMA};
     border: none;
     border-bottom-right-radius: 38px;
 }}
 
-/* ---------- Mensajes ---------- */
+/* Mensajes */
+
 QMessageBox {{
     background-color: {CREMA};
 }}
+
 QMessageBox QLabel {{
     font-size: 18px;
     font-weight: 800;
     color: {NAVY};
 }}
+
 QMessageBox QPushButton {{
     background-color: {MORADO};
     color: white;
@@ -252,7 +278,10 @@ QMessageBox QPushButton {{
     font-size: 17px;
     font-weight: 900;
 }}
-QMessageBox QPushButton:hover {{ background-color: #7D60D6; }}
+
+QMessageBox QPushButton:hover {{
+    background-color: #7D60D6;
+}}
 
 QToolTip {{
     background-color: {MORADO};
@@ -266,9 +295,14 @@ QToolTip {{
 """
 
 
+# ==========================================================
+# ESTILOS DE BOTONES
+# ==========================================================
+
 def estilo_pastilla(color, texto=NAVY, fuente=24, radio=30):
-    """Botón píldora con efecto 3D (borde inferior más oscuro)."""
+
     borde = oscuro(color)
+
     return f"""
         QPushButton {{
             background-color: {color};
@@ -280,9 +314,11 @@ def estilo_pastilla(color, texto=NAVY, fuente=24, radio=30):
             font-size: {fuente}px;
             font-weight: 900;
         }}
+
         QPushButton:hover {{
             background-color: {claro(color)};
         }}
+
         QPushButton:pressed {{
             border-bottom: 3px solid {borde};
             padding-top: 14px;
@@ -291,8 +327,9 @@ def estilo_pastilla(color, texto=NAVY, fuente=24, radio=30):
 
 
 def estilo_nav(color, texto_activo):
-    """Botón de la barra lateral: crema normal, de color cuando está activo."""
+
     borde = oscuro(color)
+
     return f"""
         QPushButton {{
             background-color: {CREMA};
@@ -305,13 +342,16 @@ def estilo_nav(color, texto_activo):
             font-size: 19px;
             font-weight: 900;
         }}
+
         QPushButton:hover {{
             background-color: #FFFFFF;
         }}
+
         QPushButton:pressed {{
             border-bottom: 3px solid #D98A1A;
             padding-top: 12px;
         }}
+
         QPushButton:checked {{
             background-color: {color};
             color: {texto_activo};
@@ -322,12 +362,13 @@ def estilo_nav(color, texto_activo):
 
 
 # ==========================================================
-# FONDO AZUL CON MANCHAS REDONDAS
+# FONDO AZUL
 # ==========================================================
 
 class FondoAzul(QWidget):
 
     def paintEvent(self, evento):
+
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -336,18 +377,49 @@ class FondoAzul(QWidget):
         degradado = QLinearGradient(0, 0, 0, h)
         degradado.setColorAt(0.0, QColor("#9BDCF8"))
         degradado.setColorAt(1.0, QColor("#4BB3E8"))
+
         p.fillRect(self.rect(), degradado)
 
         p.setPen(Qt.PenStyle.NoPen)
 
         p.setBrush(QColor(255, 255, 255, 55))
-        p.drawEllipse(int(-0.06 * w), int(0.50 * h), int(0.22 * w), int(0.55 * h))
-        p.drawEllipse(int(0.88 * w), int(0.05 * h), int(0.22 * w), int(0.45 * h))
-        p.drawEllipse(int(0.40 * w), int(-0.20 * h), int(0.30 * w), int(0.35 * h))
+
+        p.drawEllipse(
+            int(-0.06 * w),
+            int(0.50 * h),
+            int(0.22 * w),
+            int(0.55 * h)
+        )
+
+        p.drawEllipse(
+            int(0.88 * w),
+            int(0.05 * h),
+            int(0.22 * w),
+            int(0.45 * h)
+        )
+
+        p.drawEllipse(
+            int(0.40 * w),
+            int(-0.20 * h),
+            int(0.30 * w),
+            int(0.35 * h)
+        )
 
         p.setBrush(QColor(30, 140, 210, 60))
-        p.drawEllipse(int(0.84 * w), int(0.62 * h), int(0.28 * w), int(0.55 * h))
-        p.drawEllipse(int(-0.08 * w), int(-0.10 * h), int(0.20 * w), int(0.40 * h))
+
+        p.drawEllipse(
+            int(0.84 * w),
+            int(0.62 * h),
+            int(0.28 * w),
+            int(0.55 * h)
+        )
+
+        p.drawEllipse(
+            int(-0.08 * w),
+            int(-0.10 * h),
+            int(0.20 * w),
+            int(0.40 * h)
+        )
 
         p.end()
 
@@ -359,18 +431,20 @@ class FondoAzul(QWidget):
 class GestosVision(QMainWindow):
 
     def __init__(self):
+
         super().__init__()
 
         self.setWindowTitle("🤖 SEÑITAS - ¡Aprende jugando! 🤖")
         self.setMinimumSize(1050, 740)
 
         self.procesos = []
-        self.indices = {}        # attr del widget -> índice en el stack
-        self.info_paginas = {}   # índice -> datos de la página
-        self.botones_nav = {}    # índice -> botón de la barra lateral
+        self.indices = {}
+        self.info_paginas = {}
+        self.botones_nav = {}
         self.visitadas = set()
 
         self.setStyleSheet(ESTILO)
+
         self.crear_interfaz()
         self.ir_a(0)
 
@@ -388,43 +462,53 @@ class GestosVision(QMainWindow):
 
         telefono = QFrame()
         telefono.setObjectName("telefono")
+
         raiz.addWidget(telefono)
 
         fila = QHBoxLayout(telefono)
         fila.setContentsMargins(0, 0, 0, 0)
         fila.setSpacing(0)
 
-        # El stack y el grupo de botones existen antes de crear las páginas
         self.stack = QStackedWidget()
+
         self.stack.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
         )
+
         self.grupo_nav = QButtonGroup(self)
         self.grupo_nav.setExclusive(True)
 
-        # ---------- Izquierda: barra lateral ----------
+        # Barra lateral
+
         barra, self.nav_layout = self.crear_barra_lateral()
         fila.addWidget(barra)
 
-        # ---------- Derecha: cabecera + contenido ----------
+        # Cabecera y contenido
+
         derecha = QVBoxLayout()
         derecha.setSpacing(0)
+
         derecha.addWidget(self.crear_cabecera())
 
         cuerpo = QFrame()
         cuerpo.setObjectName("cuerpo")
+
         cuerpo_layout = QVBoxLayout(cuerpo)
         cuerpo_layout.setContentsMargins(20, 18, 20, 20)
+
         cuerpo_layout.addWidget(self.stack, 1)
+
         derecha.addWidget(cuerpo, 1)
 
         fila.addLayout(derecha, 1)
 
         self.crear_paginas()
+
         self.barra_progreso.setRange(0, self.stack.count())
 
     # ======================================================
-    # BARRA LATERAL NARANJA
+    # BARRA LATERAL
     # ======================================================
 
     def crear_barra_lateral(self):
@@ -434,16 +518,19 @@ class GestosVision(QMainWindow):
         barra.setFixedWidth(300)
 
         layout = QVBoxLayout(barra)
+
         layout.setContentsMargins(18, 20, 18, 18)
         layout.setSpacing(10)
 
-        # ---------- Marca ----------
+        # Marca
+
         marca_fila = QHBoxLayout()
         marca_fila.setSpacing(12)
 
         logo = QLabel("🤖")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo.setFixedSize(62, 62)
+
         logo.setStyleSheet("""
             background-color: #FFC93C;
             border: none;
@@ -454,44 +541,62 @@ class GestosVision(QMainWindow):
 
         textos = QVBoxLayout()
         textos.setSpacing(0)
+
         t1 = QLabel("SEÑITAS")
         t1.setObjectName("marca")
+
         t2 = QLabel("¡Aprende señas! ✨")
         t2.setObjectName("marca_sub")
+
         textos.addWidget(t1)
         textos.addWidget(t2)
 
         marca_fila.addWidget(logo)
         marca_fila.addLayout(textos, 1)
+
         layout.addLayout(marca_fila)
         layout.addSpacing(10)
 
-        # ---------- Botones de navegación ----------
+        # Navegación
+
         nav = QVBoxLayout()
         nav.setSpacing(10)
+
         layout.addLayout(nav)
 
         layout.addStretch(1)
 
-        # ---------- Progreso ----------
+        # Progreso
+
         self.barra_progreso = QProgressBar()
         self.barra_progreso.setTextVisible(False)
+
         layout.addWidget(self.barra_progreso)
 
-        # ---------- Salir ----------
+        # Salir
+
         salir = QPushButton("👋 Salir")
         salir.setMinimumHeight(54)
+
         salir.setCursor(Qt.CursorShape.PointingHandCursor)
+
         salir.setStyleSheet(
-            estilo_pastilla("#F87171", texto="white", fuente=19, radio=27)
+            estilo_pastilla(
+                "#F87171",
+                texto="white",
+                fuente=19,
+                radio=27
+            )
         )
+
         salir.clicked.connect(self.close)
+
         layout.addWidget(salir)
 
         return barra, nav
 
     # ======================================================
-    # CABECERA MORADA
+    # CABECERA
     # ======================================================
 
     def crear_cabecera(self):
@@ -501,12 +606,14 @@ class GestosVision(QMainWindow):
         cab.setFixedHeight(96)
 
         lay = QHBoxLayout(cab)
+
         lay.setContentsMargins(24, 8, 24, 8)
         lay.setSpacing(16)
 
         avatar = QLabel("🐵")
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         avatar.setFixedSize(70, 70)
+
         avatar.setStyleSheet("""
             background-color: #FFD58A;
             border: 4px solid #FFC93C;
@@ -516,10 +623,13 @@ class GestosVision(QMainWindow):
 
         textos = QVBoxLayout()
         textos.setSpacing(0)
+
         self.lbl_titulo = QLabel("")
         self.lbl_titulo.setObjectName("titulo")
+
         self.lbl_sub = QLabel("")
         self.lbl_sub.setObjectName("saludo_sub")
+
         textos.addWidget(self.lbl_titulo)
         textos.addWidget(self.lbl_sub)
 
@@ -533,43 +643,71 @@ class GestosVision(QMainWindow):
         return cab
 
     # ======================================================
-    # PÁGINAS
+    # CREAR PÁGINAS
     # ======================================================
 
     def crear_paginas(self):
 
         for info in PAGINAS_JUGAR:
+
             widget = info["fabrica"]()
+
             setattr(self, info["attr"], widget)
-            pagina = self.envolver_en_tarjeta(widget, info["color"])
+
+            pagina = self.envolver_en_tarjeta(
+                widget,
+                info["color"]
+            )
+
             self.agregar_pagina(info, pagina)
+
             self.indices[info["attr"]] = self.stack.count() - 1
 
-        self.agregar_pagina(PAGINA_ADULTOS, self.crear_pagina_adultos())
+        self.agregar_pagina(
+            PAGINA_ADULTOS,
+            self.crear_pagina_adultos()
+        )
 
     def agregar_pagina(self, info, pagina):
-        """Registra la página y crea su botón en la barra lateral."""
 
         indice = self.stack.addWidget(pagina)
 
-        boton = QPushButton(f'{info["emoji"]}  {info["nombre"]}')
+        boton = QPushButton(
+            f'{info["emoji"]}  {info["nombre"]}'
+        )
+
         boton.setCheckable(True)
         boton.setMinimumHeight(68)
+
         boton.setCursor(Qt.CursorShape.PointingHandCursor)
-        boton.setStyleSheet(estilo_nav(info["color"], info["texto_activo"]))
-        boton.clicked.connect(lambda checked=False, i=indice: self.ir_a(i))
+
+        boton.setStyleSheet(
+            estilo_nav(
+                info["color"],
+                info["texto_activo"]
+            )
+        )
+
+        boton.clicked.connect(
+            lambda checked=False, i=indice: self.ir_a(i)
+        )
 
         self.nav_layout.addWidget(boton)
+
         self.grupo_nav.addButton(boton, indice)
+
         self.botones_nav[indice] = boton
         self.info_paginas[indice] = info
 
-    # ---------- tarjeta para cámara y juegos ----------
+    # ======================================================
+    # TARJETA EXTERIOR
+    # ======================================================
 
     def envolver_en_tarjeta(self, widget, color):
 
         tarjeta = QFrame()
         tarjeta.setObjectName("tarjeta")
+
         tarjeta.setStyleSheet(f"""
             QFrame#tarjeta {{
                 background-color: #FFFFFF;
@@ -577,35 +715,46 @@ class GestosVision(QMainWindow):
                 border-radius: 32px;
             }}
         """)
+
         tarjeta.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
         )
 
         layout = QVBoxLayout(tarjeta)
         layout.setContentsMargins(12, 12, 12, 12)
 
         widget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
         )
+
         layout.addWidget(widget, 1)
 
         return tarjeta
 
-    # ---------- página de adultos: lista tipo "niveles" ----------
+    # ======================================================
+    # PÁGINA DE ADULTOS
+    # ======================================================
 
     def crear_pagina_adultos(self):
 
         pagina = QWidget()
+
         externo = QHBoxLayout(pagina)
         externo.setContentsMargins(0, 0, 0, 0)
+
         externo.addStretch(1)
 
         columna = QVBoxLayout()
         columna.setSpacing(16)
+
         columna.addStretch(1)
 
         for herramienta in HERRAMIENTAS_ADULTOS:
-            columna.addWidget(self.crear_fila_herramienta(herramienta))
+            columna.addWidget(
+                self.crear_fila_herramienta(herramienta)
+            )
 
         columna.addStretch(1)
 
@@ -623,6 +772,7 @@ class GestosVision(QMainWindow):
 
         fila = QFrame()
         fila.setObjectName("fila")
+
         fila.setStyleSheet("""
             QFrame#fila {
                 background-color: #FFFFFF;
@@ -633,12 +783,14 @@ class GestosVision(QMainWindow):
         """)
 
         lay = QHBoxLayout(fila)
+
         lay.setContentsMargins(20, 14, 22, 14)
         lay.setSpacing(20)
 
         avatar = QLabel(h["emoji"])
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         avatar.setFixedSize(92, 92)
+
         avatar.setStyleSheet(f"""
             background-color: {h['color']};
             border: 5px solid {oscuro(h['color'])};
@@ -650,21 +802,34 @@ class GestosVision(QMainWindow):
         textos.setSpacing(2)
 
         nombre = QLabel(h["nombre"])
+
         nombre.setStyleSheet(
             f"font-size: 28px; font-weight: 900; color: {NAVY};"
         )
+
         desc = QLabel(h["descripcion"])
         desc.setWordWrap(True)
+
         desc.setStyleSheet(
             "font-size: 16px; font-weight: 700; color: #7A6A99;"
         )
+
         textos.addWidget(nombre)
         textos.addWidget(desc)
 
         boton = QPushButton("¡Abrir! 🚀")
+
         boton.setMinimumSize(200, 68)
         boton.setCursor(Qt.CursorShape.PointingHandCursor)
-        boton.setStyleSheet(estilo_pastilla(h["color"], fuente=24, radio=34))
+
+        boton.setStyleSheet(
+            estilo_pastilla(
+                h["color"],
+                fuente=24,
+                radio=34
+            )
+        )
+
         boton.clicked.connect(
             lambda checked=False, o=h: self.ejecutar_programa(o)
         )
@@ -682,37 +847,53 @@ class GestosVision(QMainWindow):
     def ir_a(self, indice):
 
         self.stack.setCurrentIndex(indice)
+
         self.botones_nav[indice].setChecked(True)
 
         info = self.info_paginas[indice]
-        self.lbl_titulo.setText(f'{info["emoji"]} {info["nombre"]}')
+
+        self.lbl_titulo.setText(
+            f'{info["emoji"]} {info["nombre"]}'
+        )
+
         self.lbl_sub.setText(info["subtitulo"])
 
         self.visitadas.add(indice)
+
         total = self.stack.count()
-        self.pastilla_estrellas.setText(f"⭐ {len(self.visitadas)}/{total}")
+
+        self.pastilla_estrellas.setText(
+            f"⭐ {len(self.visitadas)}/{total}"
+        )
+
         self.barra_progreso.setValue(indice + 1)
 
         self._al_cambiar_pagina(indice)
 
     def _al_cambiar_pagina(self, indice):
-        """Detiene cámara / juegos de las secciones que ya no se ven."""
 
         acciones = [
             ("widget_reconocer", "detener_reconocimiento"),
             ("widget_practica", "detener_practica"),
             ("widget_juego", "pausar"),
+            ("widget_camino", "pausar"),
         ]
 
         for attr, metodo in acciones:
+
             if self.indices.get(attr) != indice and hasattr(self, attr):
+
                 try:
-                    getattr(getattr(self, attr), metodo)()
+                    getattr(
+                        getattr(self, attr),
+                        metodo
+                    )()
+
                 except Exception:
                     pass
 
     # ======================================================
-    # EJECUTAR MÓDULOS
+    # EJECUTAR HERRAMIENTAS
     # ======================================================
 
     def ejecutar_programa(self, opcion):
@@ -721,21 +902,27 @@ class GestosVision(QMainWindow):
         ruta = BASE_DIR / opcion["archivo"]
 
         if not ruta.is_file():
+
             QMessageBox.warning(
                 self,
                 "¡Ups! 🙈",
                 f"No encontramos el archivo:\n\n{ruta}\n\n"
                 "Pídele a un adulto que lo revise.",
             )
+
             return
 
         try:
+
             proceso = subprocess.Popen(
                 [sys.executable, str(ruta)],
                 cwd=str(BASE_DIR),
             )
+
             self.procesos.append(proceso)
+
         except Exception as error:
+
             QMessageBox.critical(
                 self,
                 "¡Algo salió mal! 😢",
@@ -743,7 +930,7 @@ class GestosVision(QMainWindow):
             )
 
     # ======================================================
-    # CERRAR
+    # CERRAR APLICACIÓN
     # ======================================================
 
     def closeEvent(self, event):
@@ -751,12 +938,14 @@ class GestosVision(QMainWindow):
         respuesta = QMessageBox.question(
             self,
             "¡Hasta pronto! 👋",
-            "¿Quieres cerrar GESTOSVISION?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            "¿Quieres cerrar SEÑITAS?",
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
 
         if respuesta != QMessageBox.StandardButton.Yes:
+
             event.ignore()
             return
 
@@ -764,19 +953,29 @@ class GestosVision(QMainWindow):
             ("widget_practica", "detener_practica"),
             ("widget_reconocer", "detener_reconocimiento"),
             ("widget_juego", "liberar"),
+            ("widget_camino", "liberar"),
         ]
 
         for attr, metodo in limpiezas:
+
             if hasattr(self, attr):
+
                 try:
-                    getattr(getattr(self, attr), metodo)()
+                    getattr(
+                        getattr(self, attr),
+                        metodo
+                    )()
+
                 except Exception:
                     pass
 
         for proceso in self.procesos:
+
             if proceso.poll() is None:
+
                 try:
                     proceso.terminate()
+
                 except Exception:
                     pass
 
@@ -790,6 +989,7 @@ class GestosVision(QMainWindow):
 def main():
 
     app = QApplication(sys.argv)
+
     app.setApplicationName("GESTOSVISION")
     app.setStyle("Fusion")
 
