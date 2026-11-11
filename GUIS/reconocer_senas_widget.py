@@ -105,9 +105,6 @@ class ReconocerSenasWidget(QWidget):
 
     def crear_interfaz(self):
 
-        # DISTRIBUCIÓN PRINCIPAL:
-        # CÁMARA A LA IZQUIERDA Y CONTROLES A LA DERECHA.
-
         layout_principal = QHBoxLayout(self)
         layout_principal.setContentsMargins(18, 16, 18, 16)
         layout_principal.setSpacing(18)
@@ -145,7 +142,7 @@ class ReconocerSenasWidget(QWidget):
         layout_principal.addWidget(panel_camara, 1)
 
         # ==================================================
-        # LADO DERECHO: ESTADO, HISTORIAL Y BOTONES
+        # LADO DERECHO: CONTROLES
         # ==================================================
 
         panel_controles = QFrame()
@@ -159,9 +156,10 @@ class ReconocerSenasWidget(QWidget):
         layout_derecho.setContentsMargins(14, 16, 14, 16)
         layout_derecho.setSpacing(13)
 
-        # ---------- Título de controles ----------
+        # ---------- Título ----------
 
         titulo_controles = QLabel("¡A JUGAR!")
+
         titulo_controles.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
@@ -182,6 +180,7 @@ class ReconocerSenasWidget(QWidget):
         # ---------- Estado ----------
 
         titulo_estado = QLabel("ESTADO")
+
         titulo_estado.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
@@ -213,6 +212,7 @@ class ReconocerSenasWidget(QWidget):
         # ---------- Historial ----------
 
         titulo_historial = QLabel("MIS SEÑAS")
+
         titulo_historial.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
@@ -241,10 +241,14 @@ class ReconocerSenasWidget(QWidget):
 
         layout_derecho.addWidget(self.lbl_historial)
 
-        # Separación
+        # ---------- Separador ----------
 
         separador = QFrame()
-        separador.setFrameShape(QFrame.Shape.HLine)
+
+        separador.setFrameShape(
+            QFrame.Shape.HLine
+        )
+
         separador.setStyleSheet(
             f"background-color: {LAVANDA}; border: none; max-height: 2px;"
         )
@@ -263,10 +267,6 @@ class ReconocerSenasWidget(QWidget):
         self.boton_iniciar.setCursor(
             Qt.CursorShape.PointingHandCursor
         )
-
-        self.boton_iniciar.setWordWrap(True) if hasattr(
-            self.boton_iniciar, "setWordWrap"
-        ) else None
 
         self.boton_iniciar.clicked.connect(
             self.iniciar_reconocimiento
@@ -318,8 +318,6 @@ class ReconocerSenasWidget(QWidget):
 
         layout_derecho.addStretch()
 
-        # Añadir panel derecho
-
         layout_principal.addWidget(panel_controles)
 
         # ==================================================
@@ -334,15 +332,11 @@ class ReconocerSenasWidget(QWidget):
                 font-size: 14px;
             }}
 
-            /* PANEL DE CÁMARA */
-
             QFrame#panelCamara {{
                 background-color: {BLANCO};
                 border: 5px solid {AMARILLO};
                 border-radius: 32px;
             }}
-
-            /* VISOR */
 
             QLabel#visorCamara {{
                 background-color: {CREMA};
@@ -354,16 +348,12 @@ class ReconocerSenasWidget(QWidget):
                 font-weight: 700;
             }}
 
-            /* PANEL DERECHO */
-
             QFrame#panelControles {{
                 background-color: {BLANCO};
                 border: 3px solid #FFD08A;
                 border-bottom: 7px solid {NARANJA};
                 border-radius: 26px;
             }}
-
-            /* ESTADO */
 
             QLabel#valorEstado {{
                 color: {MORADO};
@@ -375,8 +365,6 @@ class ReconocerSenasWidget(QWidget):
                 padding: 10px;
             }}
 
-            /* HISTORIAL */
-
             QLabel#valorHistorial {{
                 color: {VERDE};
                 background-color: #E5F5E7;
@@ -386,8 +374,6 @@ class ReconocerSenasWidget(QWidget):
                 font-weight: 900;
                 padding: 10px;
             }}
-
-            /* BOTONES */
 
             QPushButton {{
                 background-color: {MORADO};
@@ -416,8 +402,6 @@ class ReconocerSenasWidget(QWidget):
                 border-bottom: 7px solid #D3C6EC;
             }}
 
-            /* BOTÓN PRINCIPAL */
-
             QPushButton#principal {{
                 background-color: {ROSA};
                 border-bottom: 7px solid {_oscuro(ROSA)};
@@ -438,8 +422,6 @@ class ReconocerSenasWidget(QWidget):
                 border-bottom: 7px solid #EBB6C3;
             }}
 
-            /* BOTÓN LIMPIAR */
-
             QPushButton#limpiar {{
                 background-color: {VERDE};
                 border-bottom: 7px solid {_oscuro(VERDE)};
@@ -458,8 +440,6 @@ class ReconocerSenasWidget(QWidget):
                 color: #A9C7AB;
                 border-bottom: 7px solid #BFDCB1;
             }}
-
-            /* BOTÓN DETENER */
 
             QPushButton#detener {{
                 background-color: {NARANJA};
@@ -624,18 +604,50 @@ class ReconocerSenasWidget(QWidget):
         if self.camera is not None and self.camera.isOpened():
             return True
 
-        self.camera = cv2.VideoCapture(0)
+        # Probar diferentes sistemas de acceso a la cámara.
+        # MSMF fue el que funcionó en la prueba independiente.
 
-        if not self.camera.isOpened():
+        sistemas = [
+            cv2.CAP_MSMF,
+            cv2.CAP_DSHOW,
+            cv2.CAP_ANY,
+        ]
+
+        self.camera = None
+
+        for sistema in sistemas:
+
+            try:
+
+                camara = cv2.VideoCapture(0, sistema)
+
+                if camara.isOpened():
+
+                    correcto, frame = camara.read()
+
+                    if correcto and frame is not None:
+
+                        self.camera = camara
+                        break
+
+                camara.release()
+
+            except Exception as error:
+
+                print(
+                    f"Error al intentar abrir la cámara: {error}"
+                )
+
+        if self.camera is None:
 
             QMessageBox.critical(
                 self,
-                "¡Cámara ocupada! 📷",
-                "No pudimos abrir la cámara.\n"
-                "Pídele a un adulto que la revise. 🙏",
+                "¡Cámara no disponible! 📷",
+                "No pudimos abrir la cámara.\n\n"
+                "Comprueba que esté conectada y que ninguna "
+                "otra aplicación la esté utilizando.",
             )
 
-            self.camera = None
             return False
 
         try:
@@ -805,8 +817,9 @@ class ReconocerSenasWidget(QWidget):
 
                     self.label = "SEÑA NO RECONOCIDA"
 
-            except Exception:
+            except Exception as error:
 
+                print("Error en la predicción:", error)
                 self.label = "ERROR EN LA PREDICCIÓN"
 
         else:
