@@ -28,6 +28,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_DIR = BASE_DIR / "modelos"
 MODEL_FILE = MODEL_DIR / "gestos_lstm.keras"
 LABELS_FILE = MODEL_DIR / "gestos_lstm_labels.npz"
+print("BASE_DIR:", BASE_DIR)
+print("MODEL_DIR:", MODEL_DIR)
+print("MODEL_FILE:", MODEL_FILE)
+print("LABELS_FILE:", LABELS_FILE)
+
+print("Modelo existe:", MODEL_FILE.exists())
+print("Etiquetas existen:", LABELS_FILE.exists())
+
+
 
 SEQUENCE_LENGTH = 30
 FEATURE_COUNT = 126
