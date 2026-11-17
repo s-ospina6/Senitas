@@ -1,14 +1,15 @@
 
-
 import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
+    QBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -57,6 +58,7 @@ class ModoAprendizajeWidget(QWidget):
 
         self.imagen_actual = None
         self.pixmap_original = None
+        self.modo_vertical = None
 
         self.crear_interfaz()
         self.cargar_lista()
@@ -67,16 +69,16 @@ class ModoAprendizajeWidget(QWidget):
 
     def crear_interfaz(self):
 
-        layout_principal = QVBoxLayout(self)
-        layout_principal.setContentsMargins(18, 14, 18, 14)
-        layout_principal.setSpacing(12)
+        self.layout_principal = QVBoxLayout(self)
+        self.layout_principal.setContentsMargins(18, 14, 18, 14)
+        self.layout_principal.setSpacing(12)
 
         # --------------------------------------------------
         # TÍTULO
         # --------------------------------------------------
 
-        titulo = QLabel("📚 ¡Aprendamos señas!")
-        titulo.setStyleSheet("""
+        self.titulo = QLabel("📚 ¡Aprendamos señas!")
+        self.titulo.setStyleSheet("""
             QLabel {
                 font-size: 28px;
                 font-weight: 900;
@@ -85,10 +87,11 @@ class ModoAprendizajeWidget(QWidget):
             }
         """)
 
-        descripcion = QLabel(
+        self.descripcion = QLabel(
             "Busca una seña y descubre cómo se representa. ✨"
         )
-        descripcion.setStyleSheet("""
+        self.descripcion.setWordWrap(True)
+        self.descripcion.setStyleSheet("""
             QLabel {
                 color: #7A6A99;
                 font-size: 15px;
@@ -96,15 +99,15 @@ class ModoAprendizajeWidget(QWidget):
             }
         """)
 
-        layout_principal.addWidget(titulo)
-        layout_principal.addWidget(descripcion)
+        self.layout_principal.addWidget(self.titulo)
+        self.layout_principal.addWidget(self.descripcion)
 
         # --------------------------------------------------
         # BÚSQUEDA
         # --------------------------------------------------
 
-        layout_busqueda = QHBoxLayout()
-        layout_busqueda.setSpacing(10)
+        self.layout_busqueda = QHBoxLayout()
+        self.layout_busqueda.setSpacing(10)
 
         self.campo_busqueda = QLineEdit()
         self.campo_busqueda.setPlaceholderText(
@@ -135,33 +138,34 @@ class ModoAprendizajeWidget(QWidget):
             self.actualizar_lista
         )
 
-        layout_busqueda.addWidget(self.campo_busqueda, 1)
-        layout_busqueda.addWidget(self.boton_buscar)
-        layout_busqueda.addWidget(self.boton_actualizar)
+        self.layout_busqueda.addWidget(self.campo_busqueda, 1)
+        self.layout_busqueda.addWidget(self.boton_buscar)
+        self.layout_busqueda.addWidget(self.boton_actualizar)
 
-        layout_principal.addLayout(layout_busqueda)
+        self.layout_principal.addLayout(self.layout_busqueda)
 
         # --------------------------------------------------
         # PANEL CENTRAL
         # --------------------------------------------------
 
-        separador = QSplitter(Qt.Orientation.Horizontal)
-        separador.setChildrenCollapsible(False)
-        separador.setHandleWidth(8)
+        self.separador = QSplitter(Qt.Orientation.Horizontal)
+        self.separador.setChildrenCollapsible(False)
+        self.separador.setHandleWidth(8)
 
         # ==================================================
         # PANEL DE LISTA
         # ==================================================
 
-        panel_lista = QFrame()
-        panel_lista.setObjectName("panelLista")
+        self.panel_lista = QFrame()
+        self.panel_lista.setObjectName("panelLista")
+        self.panel_lista.setMinimumWidth(0)
 
-        layout_lista = QVBoxLayout(panel_lista)
-        layout_lista.setContentsMargins(14, 14, 14, 14)
-        layout_lista.setSpacing(12)
+        self.layout_lista = QVBoxLayout(self.panel_lista)
+        self.layout_lista.setContentsMargins(14, 14, 14, 14)
+        self.layout_lista.setSpacing(12)
 
-        etiqueta_lista = QLabel("🌟 Señas disponibles")
-        etiqueta_lista.setStyleSheet("""
+        self.etiqueta_lista = QLabel("🌟 Señas disponibles")
+        self.etiqueta_lista.setStyleSheet("""
             QLabel {
                 font-size: 18px;
                 font-weight: 900;
@@ -174,19 +178,20 @@ class ModoAprendizajeWidget(QWidget):
             self.seleccionar_de_lista
         )
 
-        layout_lista.addWidget(etiqueta_lista)
-        layout_lista.addWidget(self.lista_senas)
+        self.layout_lista.addWidget(self.etiqueta_lista)
+        self.layout_lista.addWidget(self.lista_senas)
 
         # ==================================================
         # PANEL DE IMAGEN
         # ==================================================
 
-        panel_imagen = QFrame()
-        panel_imagen.setObjectName("panelImagen")
+        self.panel_imagen = QFrame()
+        self.panel_imagen.setObjectName("panelImagen")
+        self.panel_imagen.setMinimumWidth(0)
 
-        layout_imagen = QVBoxLayout(panel_imagen)
-        layout_imagen.setContentsMargins(16, 14, 16, 14)
-        layout_imagen.setSpacing(12)
+        self.layout_imagen = QVBoxLayout(self.panel_imagen)
+        self.layout_imagen.setContentsMargins(16, 14, 16, 14)
+        self.layout_imagen.setSpacing(12)
 
         self.etiqueta_nombre = QLabel(
             "Selecciona una seña 👆"
@@ -194,6 +199,7 @@ class ModoAprendizajeWidget(QWidget):
         self.etiqueta_nombre.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
+        self.etiqueta_nombre.setWordWrap(True)
         self.etiqueta_nombre.setStyleSheet("""
             QLabel {
                 font-size: 23px;
@@ -209,7 +215,7 @@ class ModoAprendizajeWidget(QWidget):
         self.vista_imagen.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
-        self.vista_imagen.setMinimumSize(250, 250)
+        self.vista_imagen.setMinimumSize(100, 120)
         self.vista_imagen.setWordWrap(True)
         self.vista_imagen.setStyleSheet("""
             QLabel {
@@ -236,19 +242,19 @@ class ModoAprendizajeWidget(QWidget):
             }
         """)
 
-        layout_imagen.addWidget(self.etiqueta_nombre)
-        layout_imagen.addWidget(self.vista_imagen, 1)
-        layout_imagen.addWidget(self.etiqueta_estado)
+        self.layout_imagen.addWidget(self.etiqueta_nombre)
+        self.layout_imagen.addWidget(self.vista_imagen, 1)
+        self.layout_imagen.addWidget(self.etiqueta_estado)
 
         # --------------------------------------------------
         # UNIR PANELES
         # --------------------------------------------------
 
-        separador.addWidget(panel_lista)
-        separador.addWidget(panel_imagen)
-        separador.setSizes([270, 580])
+        self.separador.addWidget(self.panel_lista)
+        self.separador.addWidget(self.panel_imagen)
+        self.separador.setSizes([270, 580])
 
-        layout_principal.addWidget(separador, 1)
+        self.layout_principal.addWidget(self.separador, 1)
 
         # ==================================================
         # ESTILOS GENERALES
@@ -336,6 +342,7 @@ class ModoAprendizajeWidget(QWidget):
             QSplitter::handle {
                 background-color: #FFD08A;
                 width: 6px;
+                height: 6px;
                 border-radius: 3px;
             }
         """)
@@ -364,6 +371,160 @@ class ModoAprendizajeWidget(QWidget):
                 padding-top: 14px;
             }
         """)
+
+    # ======================================================
+    # ADAPTAR INTERFAZ AL TAMAÑO DE PANTALLA
+    # ======================================================
+
+    def adaptar_interfaz(self):
+
+        ancho = self.width()
+        alto = self.height()
+
+        # --------------------------------------------------
+        # PANTALLAS PEQUEÑAS
+        # --------------------------------------------------
+
+        if ancho < 720:
+
+            self.layout_principal.setContentsMargins(
+                8, 8, 8, 8
+            )
+            self.layout_principal.setSpacing(8)
+
+            self.layout_busqueda.setDirection(
+                QBoxLayout.Direction.TopToBottom
+            )
+
+            self.separador.setOrientation(
+                Qt.Orientation.Vertical
+            )
+            self.separador.setHandleWidth(6)
+
+            self.separador.setSizes([
+                max(140, alto // 3),
+                max(180, alto * 2 // 3)
+            ])
+
+            self.campo_busqueda.setMinimumHeight(42)
+            self.boton_buscar.setMinimumHeight(42)
+            self.boton_actualizar.setMinimumHeight(42)
+
+            self.vista_imagen.setMinimumSize(80, 100)
+
+            self.titulo.setStyleSheet("""
+                QLabel {
+                    font-size: 21px;
+                    font-weight: 900;
+                    color: #2B3A67;
+                    padding-bottom: 2px;
+                }
+            """)
+
+            self.descripcion.setStyleSheet("""
+                QLabel {
+                    color: #7A6A99;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+            """)
+
+            self.etiqueta_lista.setStyleSheet("""
+                QLabel {
+                    font-size: 16px;
+                    font-weight: 900;
+                    color: #2B3A67;
+                }
+            """)
+
+            self.etiqueta_nombre.setStyleSheet("""
+                QLabel {
+                    font-size: 18px;
+                    font-weight: 900;
+                    color: #6C4DC4;
+                    padding: 4px;
+                }
+            """)
+
+        # --------------------------------------------------
+        # PANTALLAS MEDIANAS Y GRANDES
+        # --------------------------------------------------
+
+        else:
+
+            margen = 12 if ancho < 1100 else 18
+
+            self.layout_principal.setContentsMargins(
+                margen,
+                10 if ancho < 1100 else 14,
+                margen,
+                10 if ancho < 1100 else 14
+            )
+
+            self.layout_principal.setSpacing(
+                10 if ancho < 1100 else 12
+            )
+
+            self.layout_busqueda.setDirection(
+                QBoxLayout.Direction.LeftToRight
+            )
+
+            self.separador.setOrientation(
+                Qt.Orientation.Horizontal
+            )
+            self.separador.setHandleWidth(8)
+
+            self.separador.setSizes([
+                max(220, int(ancho * 0.32)),
+                max(300, int(ancho * 0.68))
+            ])
+
+            self.campo_busqueda.setMinimumHeight(0)
+            self.boton_buscar.setMinimumHeight(0)
+            self.boton_actualizar.setMinimumHeight(0)
+
+            self.vista_imagen.setMinimumSize(160, 160)
+
+            titulo_tamano = 24 if ancho < 1100 else 28
+            descripcion_tamano = 13 if ancho < 1100 else 15
+            nombre_tamano = 20 if ancho < 1100 else 23
+            lista_tamano = 16 if ancho < 1100 else 18
+
+            self.titulo.setStyleSheet(f"""
+                QLabel {{
+                    font-size: {titulo_tamano}px;
+                    font-weight: 900;
+                    color: #2B3A67;
+                    padding-bottom: 2px;
+                }}
+            """)
+
+            self.descripcion.setStyleSheet(f"""
+                QLabel {{
+                    color: #7A6A99;
+                    font-size: {descripcion_tamano}px;
+                    font-weight: 700;
+                }}
+            """)
+
+            self.etiqueta_lista.setStyleSheet(f"""
+                QLabel {{
+                    font-size: {lista_tamano}px;
+                    font-weight: 900;
+                    color: #2B3A67;
+                }}
+            """)
+
+            self.etiqueta_nombre.setStyleSheet(f"""
+                QLabel {{
+                    font-size: {nombre_tamano}px;
+                    font-weight: 900;
+                    color: #6C4DC4;
+                    padding: 6px;
+                }}
+            """)
+
+        self.ajustar_imagen()
 
     # ======================================================
     # OBTENER IMÁGENES
@@ -440,8 +601,11 @@ class ModoAprendizajeWidget(QWidget):
                 nombre_anterior,
                 Qt.MatchFlag.MatchExactly
             )
+
             if coincidencias:
-                self.lista_senas.setCurrentItem(coincidencias[0])
+                self.lista_senas.setCurrentItem(
+                    coincidencias[0]
+                )
 
     # ======================================================
     # ACTUALIZAR LISTA
@@ -591,13 +755,18 @@ class ModoAprendizajeWidget(QWidget):
         self.vista_imagen.setPixmap(pixmap_escalado)
 
     # ======================================================
-    # REDIMENSIONAR IMAGEN
+    # REDIMENSIONAR INTERFAZ E IMAGEN
     # ======================================================
 
     def resizeEvent(self, evento):
 
         super().resizeEvent(evento)
-        self.ajustar_imagen()
+
+        # Evita errores si Qt redimensiona durante la construcción.
+        if not hasattr(self, "layout_principal"):
+            return
+
+        self.adaptar_interfaz()
 
 
 # ==========================================================
@@ -606,13 +775,11 @@ class ModoAprendizajeWidget(QWidget):
 
 if __name__ == "__main__":
 
-    from PySide6.QtWidgets import QApplication
-
     app = QApplication(sys.argv)
 
     ventana = ModoAprendizajeWidget()
     ventana.resize(1000, 650)
-    ventana.setWindowTitle("GESTOSVISION - Modo aprendizaje")
+    ventana.setWindowTitle("SEÑITAS - Modo aprendizaje")
 
     ventana.show()
 

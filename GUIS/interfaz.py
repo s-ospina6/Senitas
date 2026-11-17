@@ -326,7 +326,7 @@ def estilo_pastilla(color, texto=NAVY, fuente=24, radio=30):
     """
 
 
-def estilo_nav(color, texto_activo):
+def estilo_nav(color, texto_activo, fuente=19):
 
     borde = oscuro(color)
 
@@ -339,7 +339,7 @@ def estilo_nav(color, texto_activo):
             border-radius: 32px;
             padding: 8px 18px;
             text-align: left;
-            font-size: 19px;
+            font-size: {fuente}px;
             font-weight: 900;
         }}
 
@@ -435,7 +435,7 @@ class GestosVision(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("🤖 SEÑITAS - ¡Aprende jugando! 🤖")
-        self.setMinimumSize(1050, 740)
+        self.setMinimumSize(900, 600)
 
         self.procesos = []
         self.indices = {}
@@ -458,7 +458,8 @@ class GestosVision(QMainWindow):
         self.setCentralWidget(fondo)
 
         raiz = QVBoxLayout(fondo)
-        raiz.setContentsMargins(22, 18, 22, 18)
+        self.raiz_layout = raiz
+        raiz.setContentsMargins(18, 14, 18, 14)
 
         telefono = QFrame()
         telefono.setObjectName("telefono")
@@ -482,6 +483,7 @@ class GestosVision(QMainWindow):
         # Barra lateral
 
         barra, self.nav_layout = self.crear_barra_lateral()
+        self.barra_lateral = barra
         fila.addWidget(barra)
 
         # Cabecera y contenido
@@ -489,13 +491,15 @@ class GestosVision(QMainWindow):
         derecha = QVBoxLayout()
         derecha.setSpacing(0)
 
-        derecha.addWidget(self.crear_cabecera())
+        self.cabecera = self.crear_cabecera()
+        derecha.addWidget(self.cabecera)
 
         cuerpo = QFrame()
         cuerpo.setObjectName("cuerpo")
 
         cuerpo_layout = QVBoxLayout(cuerpo)
-        cuerpo_layout.setContentsMargins(20, 18, 20, 20)
+        self.cuerpo_layout = cuerpo_layout
+        cuerpo_layout.setContentsMargins(16, 14, 16, 16)
 
         cuerpo_layout.addWidget(self.stack, 1)
 
@@ -508,6 +512,56 @@ class GestosVision(QMainWindow):
         self.barra_progreso.setRange(0, self.stack.count())
 
     # ======================================================
+    def resizeEvent(self, evento):
+        super().resizeEvent(evento)
+
+        # Durante la construcción inicial aún no existen estos controles.
+        if not hasattr(self, "barra_lateral"):
+            return
+
+        ancho = self.width()
+
+        if ancho < 1150:
+            ancho_barra = 205
+            margen_exterior = 8
+            margen_contenido = 9
+            alto_cabecera = 68
+            alto_nav = 54
+            fuente_nav = 15
+        elif ancho < 1450:
+            ancho_barra = 245
+            margen_exterior = 12
+            margen_contenido = 13
+            alto_cabecera = 78
+            alto_nav = 60
+            fuente_nav = 17
+        else:
+            ancho_barra = 285
+            margen_exterior = 18
+            margen_contenido = 18
+            alto_cabecera = 92
+            alto_nav = 68
+            fuente_nav = 19
+
+        self.barra_lateral.setFixedWidth(ancho_barra)
+        self.raiz_layout.setContentsMargins(
+            margen_exterior, margen_exterior,
+            margen_exterior, margen_exterior
+        )
+        self.cuerpo_layout.setContentsMargins(
+            margen_contenido, margen_contenido,
+            margen_contenido, margen_contenido
+        )
+        self.cabecera.setFixedHeight(alto_cabecera)
+
+        for indice, boton in self.botones_nav.items():
+            boton.setMinimumHeight(alto_nav)
+            info = self.info_paginas[indice]
+            boton.setStyleSheet(estilo_nav(
+                info["color"], info["texto_activo"],
+                fuente=fuente_nav
+            ))
+
     # BARRA LATERAL
     # ======================================================
 
@@ -515,7 +569,7 @@ class GestosVision(QMainWindow):
 
         barra = QFrame()
         barra.setObjectName("barra")
-        barra.setFixedWidth(300)
+        barra.setFixedWidth(260)
 
         layout = QVBoxLayout(barra)
 
@@ -603,7 +657,7 @@ class GestosVision(QMainWindow):
 
         cab = QFrame()
         cab.setObjectName("cabecera")
-        cab.setFixedHeight(96)
+        cab.setFixedHeight(84)
 
         lay = QHBoxLayout(cab)
 
@@ -760,7 +814,7 @@ class GestosVision(QMainWindow):
 
         contenedor = QWidget()
         contenedor.setMaximumWidth(1000)
-        contenedor.setMinimumWidth(600)
+        contenedor.setMinimumWidth(0)
         contenedor.setLayout(columna)
 
         externo.addWidget(contenedor, 10)
@@ -989,7 +1043,6 @@ class GestosVision(QMainWindow):
 def main():
 
     app = QApplication(sys.argv)
-
     app.setApplicationName("GESTOSVISION")
     app.setStyle("Fusion")
 

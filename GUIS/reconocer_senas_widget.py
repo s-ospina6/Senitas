@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QMessageBox,
     QSizePolicy,
+    QBoxLayout,
 )
 
 
@@ -114,15 +115,16 @@ class ReconocerSenasWidget(QWidget):
 
     def crear_interfaz(self):
 
-        layout_principal = QHBoxLayout(self)
-        layout_principal.setContentsMargins(18, 16, 18, 16)
-        layout_principal.setSpacing(18)
+        self.layout_principal = QHBoxLayout(self)
+        self.layout_principal.setContentsMargins(18, 16, 18, 16)
+        self.layout_principal.setSpacing(18)
 
         # ==================================================
         # LADO IZQUIERDO: CÁMARA
         # ==================================================
 
-        panel_camara = QFrame()
+        self.panel_camara = QFrame()
+        panel_camara = self.panel_camara
         panel_camara.setObjectName("panelCamara")
 
         layout_camara = QVBoxLayout(panel_camara)
@@ -139,7 +141,7 @@ class ReconocerSenasWidget(QWidget):
             Qt.AlignmentFlag.AlignCenter
         )
 
-        self.vista_camara.setMinimumSize(480, 360)
+        self.vista_camara.setMinimumSize(320, 240)
 
         self.vista_camara.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -148,13 +150,14 @@ class ReconocerSenasWidget(QWidget):
 
         layout_camara.addWidget(self.vista_camara)
 
-        layout_principal.addWidget(panel_camara, 1)
+        self.layout_principal.addWidget(panel_camara, 1)
 
         # ==================================================
         # LADO DERECHO: CONTROLES
         # ==================================================
 
-        panel_controles = QFrame()
+        self.panel_controles = QFrame()
+        panel_controles = self.panel_controles
         panel_controles.setObjectName("panelControles")
 
         panel_controles.setMinimumWidth(225)
@@ -214,7 +217,7 @@ class ReconocerSenasWidget(QWidget):
         )
 
         self.lbl_estado.setWordWrap(True)
-        self.lbl_estado.setMinimumHeight(75)
+        self.lbl_estado.setMinimumHeight(65)
 
         layout_derecho.addWidget(self.lbl_estado)
 
@@ -246,7 +249,7 @@ class ReconocerSenasWidget(QWidget):
         )
 
         self.lbl_historial.setWordWrap(True)
-        self.lbl_historial.setMinimumHeight(85)
+        self.lbl_historial.setMinimumHeight(65)
 
         layout_derecho.addWidget(self.lbl_historial)
 
@@ -271,7 +274,7 @@ class ReconocerSenasWidget(QWidget):
         )
 
         self.boton_iniciar.setObjectName("principal")
-        self.boton_iniciar.setMinimumHeight(68)
+        self.boton_iniciar.setMinimumHeight(56)
 
         self.boton_iniciar.setCursor(
             Qt.CursorShape.PointingHandCursor
@@ -290,7 +293,7 @@ class ReconocerSenasWidget(QWidget):
         )
 
         self.boton_limpiar.setObjectName("limpiar")
-        self.boton_limpiar.setMinimumHeight(68)
+        self.boton_limpiar.setMinimumHeight(56)
 
         self.boton_limpiar.setCursor(
             Qt.CursorShape.PointingHandCursor
@@ -311,7 +314,7 @@ class ReconocerSenasWidget(QWidget):
         )
 
         self.boton_detener.setObjectName("detener")
-        self.boton_detener.setMinimumHeight(68)
+        self.boton_detener.setMinimumHeight(56)
 
         self.boton_detener.setCursor(
             Qt.CursorShape.PointingHandCursor
@@ -327,7 +330,7 @@ class ReconocerSenasWidget(QWidget):
 
         layout_derecho.addStretch()
 
-        layout_principal.addWidget(panel_controles)
+        self.layout_principal.addWidget(panel_controles)
 
         # ==================================================
         # ESTILOS
@@ -470,6 +473,74 @@ class ReconocerSenasWidget(QWidget):
             }}
 
         """)
+
+        # Ajustar la distribución inicial según el tamaño disponible.
+        self.adaptar_interfaz()
+
+    # ======================================================
+    # DISEÑO RESPONSIVE
+    # ======================================================
+
+    def adaptar_interfaz(self):
+        """Acomoda cámara y controles según el ancho disponible."""
+
+        ancho = self.width()
+
+        if ancho < 850:
+            # En ventanas estrechas, los controles pasan debajo de la cámara.
+            self.layout_principal.setDirection(
+                QBoxLayout.Direction.TopToBottom
+            )
+            self.layout_principal.setContentsMargins(8, 8, 8, 8)
+            self.layout_principal.setSpacing(10)
+
+            self.panel_controles.setMinimumWidth(0)
+            self.panel_controles.setMaximumWidth(16777215)
+
+            self.vista_camara.setMinimumSize(180, 145)
+            self.lbl_estado.setMinimumHeight(48)
+            self.lbl_historial.setMinimumHeight(48)
+
+            self.boton_iniciar.setMinimumHeight(48)
+            self.boton_limpiar.setMinimumHeight(48)
+            self.boton_detener.setMinimumHeight(48)
+
+            self.panel_controles.layout().setContentsMargins(
+                10, 10, 10, 10
+            )
+            self.panel_controles.layout().setSpacing(7)
+
+        else:
+            # En pantallas amplias, cámara y controles van lado a lado.
+            self.layout_principal.setDirection(
+                QBoxLayout.Direction.LeftToRight
+            )
+            self.layout_principal.setContentsMargins(18, 16, 18, 16)
+            self.layout_principal.setSpacing(18)
+
+            self.panel_controles.setMinimumWidth(225)
+            self.panel_controles.setMaximumWidth(290)
+
+            self.vista_camara.setMinimumSize(320, 240)
+            self.lbl_estado.setMinimumHeight(65)
+            self.lbl_historial.setMinimumHeight(65)
+
+            self.boton_iniciar.setMinimumHeight(56)
+            self.boton_limpiar.setMinimumHeight(56)
+            self.boton_detener.setMinimumHeight(56)
+
+            self.panel_controles.layout().setContentsMargins(
+                14, 16, 14, 16
+            )
+            self.panel_controles.layout().setSpacing(13)
+
+        self.vista_camara.updateGeometry()
+        self.panel_camara.updateGeometry()
+        self.panel_controles.updateGeometry()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.adaptar_interfaz()
 
     # ======================================================
     # INICIAR
@@ -1119,7 +1190,7 @@ if __name__ == "__main__":
     ventana.resize(1150, 740)
 
     ventana.setWindowTitle(
-        "Reconocer señas · GESTOSVISION"
+        "Reconocer señas · SEÑITAS"
     )
 
     ventana.show()

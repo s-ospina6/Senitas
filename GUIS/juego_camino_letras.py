@@ -37,6 +37,7 @@ class JuegoCaminoLetras(QWidget):
         self.botones = []
         self.camino = []
         self.letras_celdas = {}
+        self.pixmaps_celdas = {}
 
         self.posicion_inicio = self.INICIO
         self.posicion_meta = self.META
@@ -342,6 +343,7 @@ class JuegoCaminoLetras(QWidget):
                 widget.deleteLater()
 
         self.botones = []
+        self.pixmaps_celdas = {}
 
     def construir_tablero(self):
 
@@ -359,6 +361,7 @@ class JuegoCaminoLetras(QWidget):
         ]
 
         self.letras_celdas = {}
+        self.pixmaps_celdas = {}
 
         celdas = {}
 
@@ -441,14 +444,8 @@ class JuegoCaminoLetras(QWidget):
 
                     if not pixmap.isNull():
 
-                        imagen = pixmap.scaled(
-                            QSize(78, 68),
-                            Qt.AspectRatioMode.KeepAspectRatio,
-                            Qt.TransformationMode.SmoothTransformation
-                        )
-
-                        boton.setIcon(QIcon(imagen))
-                        boton.setIconSize(imagen.size())
+                        self.pixmaps_celdas[posicion] = pixmap
+                        boton.setIcon(QIcon(pixmap))
 
                     boton.setStyleSheet(
                         self.estilo_casilla(
@@ -472,6 +469,42 @@ class JuegoCaminoLetras(QWidget):
                 fila_botones.append(boton)
 
             self.botones.append(fila_botones)
+
+        self.ajustar_iconos()
+
+    # ------------------------------------------------------
+    # AJUSTAR TAMAÑO DE LAS IMÁGENES
+    # ------------------------------------------------------
+
+    def ajustar_iconos(self):
+
+        if not self.botones:
+            return
+
+        for posicion, pixmap in self.pixmaps_celdas.items():
+
+            fila, columna = posicion
+            boton = self.botones[fila][columna]
+
+            # Tamaño máximo moderado.
+            ancho_maximo = 55
+            alto_maximo = 55
+
+            # Reducir si la casilla es pequeña.
+            ancho = min(ancho_maximo, boton.width() - 36)
+            alto = min(alto_maximo, boton.height() - 36)
+
+            ancho = max(20, ancho)
+            alto = max(20, alto)
+
+            imagen = pixmap.scaled(
+                QSize(ancho, alto),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+
+            boton.setIcon(QIcon(imagen))
+            boton.setIconSize(imagen.size())
 
     # ------------------------------------------------------
     # ESTILO DE LAS CASILLAS
@@ -514,7 +547,6 @@ class JuegoCaminoLetras(QWidget):
         if self.terminado or self.en_pausa:
             return
 
-        # Solo permitir movimientos a casillas vecinas.
         if posicion not in self.vecinos(self.posicion_actual):
 
             self.lbl_estado.setText(
@@ -523,7 +555,6 @@ class JuegoCaminoLetras(QWidget):
 
             return
 
-        # Comprobar si llegó a la meta.
         if posicion == self.posicion_meta:
 
             if self.distancia_meta(self.posicion_actual) == 1:
@@ -536,7 +567,6 @@ class JuegoCaminoLetras(QWidget):
 
             return
 
-        # No permitir volver al inicio.
         if posicion == self.posicion_inicio:
 
             self.lbl_estado.setText(
@@ -545,10 +575,8 @@ class JuegoCaminoLetras(QWidget):
 
             return
 
-        # Obtener la letra de la carta.
         letra = self.letras_celdas.get(posicion)
 
-        # Comprobar si es la letra objetivo.
         if letra != self.letra_objetivo:
 
             self.lbl_estado.setText(
@@ -557,7 +585,6 @@ class JuegoCaminoLetras(QWidget):
 
             return
 
-        # Comprobar que el movimiento acerque a la meta.
         distancia_actual = self.distancia_meta(
             self.posicion_actual
         )
@@ -572,7 +599,6 @@ class JuegoCaminoLetras(QWidget):
 
             return
 
-        # Movimiento correcto.
         self.posicion_actual = posicion
         self.movimientos += 1
         self.indice_camino += 1
@@ -658,3 +684,13 @@ class JuegoCaminoLetras(QWidget):
         for fila in self.botones:
             for boton in fila:
                 boton.setEnabled(False)
+
+    # ------------------------------------------------------
+    # REDIMENSIONAR VENTANA
+    # ------------------------------------------------------
+
+    def resizeEvent(self, event):
+
+        super().resizeEvent(event)
+
+        self.ajustar_iconos()
